@@ -17,6 +17,8 @@ OS keychain, values never printed).
 
 ## Verify the claim without deploying anything
 
+This is the whole smoke:
+
 ```bash
 grep -h "HELLO-AGENT" results/*.json   # six lanes, six tokens
 ```
