@@ -18,7 +18,7 @@ OS keychain, values never printed).
 ## Verify the claim without deploying anything
 
 ```bash
-grep -h "HELLO-AGENT" results/*.json   # five lanes echo their token
+grep -h "HELLO-AGENT" results/*.json   # six lanes, six tokens
 ```
 
 `results/n8n-run.json` records the webhook kick and the execution status
