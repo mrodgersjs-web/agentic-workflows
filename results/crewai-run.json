@@ -1,0 +1,9 @@
+{
+ "endpoint": "POST http://$RIG_HOST:8321/run (ad-crewai FastAPI+single-agent Crew)",
+ "http_status": 200,
+ "response": {
+  "reply": "HELLO-AGENT-CREWAI-OK"
+ },
+ "model": "long-context-local via LiteLLM router http://$RIG_HOST:4000/v1",
+ "utc": "2026-10-28T14:28:51.374203+00:00"
+}

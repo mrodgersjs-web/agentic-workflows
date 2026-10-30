@@ -1,0 +1,26 @@
+name: ad-flowise
+# Flowise (Apache-2.0). Data: /Volumes/OWC-DOCKER/agentic-designers/flowise (sqlite + uploads)
+services:
+  flowise:
+    image: flowiseai/flowise:${FLOWISE_VERSION}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${FLOWISE_PORT}:${FLOWISE_PORT}"
+    environment:
+      - PORT=${FLOWISE_PORT}
+      - TZ=America/Denver
+      - DATABASE_ENABLED=true
+      - DATABASE_TYPE=sqlite
+      - DATABASE_PATH=/home/flowise/.flowise/v1
+      - FLOWISE_USERNAME=${FLOWISE_USERNAME}
+      - FLOWISE_PASSWORD=${FLOWISE_PASSWORD}
+      - ALLOW_ANONYMOUS_TELEMETRY=false
+      - OPENAI_API_KEY=${ROUTER_KEY}
+      - OPENAI_BASE_URL=http://$RIG_HOST:4000/v1
+      - APP_ENCRYPTION_KEY=${FLOWISE_ENC_KEY}
+      - DISABLE_ANNOUNCEMENT_COMMUNICATIONS=true
+    volumes:
+      - /Volumes/OWC-DOCKER/agentic-designers/flowise:/home/flowise/.flowise
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}

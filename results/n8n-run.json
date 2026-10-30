@@ -1,0 +1,144 @@
+{
+ "endpoint": "POST /webhook/hello-agent -> workflow KEe7kKnlLThoYT90 (Hello Agent RIG proof)",
+ "webhook_response": {
+  "message": "Workflow was started"
+ },
+ "execution_id": "21",
+ "execution_status": "success",
+ "execution_data": {
+  "version": 1,
+  "startData": {},
+  "resultData": {
+   "runData": {
+    "Webhook": [
+     {
+      "startTime": 1793197707124,
+      "executionIndex": 0,
+      "source": [],
+      "hints": [],
+      "executionTime": 0,
+      "executionStatus": "success",
+      "data": {
+       "main": [
+        [
+         {
+          "json": {
+           "headers": {
+            "host": "$RIG_HOST:5678",
+            "user-agent": "python-requests/2.34.2",
+            "accept-encoding": "gzip, deflate",
+            "accept": "*/*",
+            "connection": "keep-alive",
+            "content-length": "18",
+            "content-type": "application/json"
+           },
+           "params": {},
+           "query": {},
+           "body": {
+            "q": "say hello"
+           },
+           "webhookUrl": "http://$RIG_HOST:5678/webhook/hello-agent",
+           "executionMode": "production"
+          },
+          "pairedItem": {
+           "item": 0
+          }
+         }
+        ]
+       ]
+      }
+     }
+    ],
+    "Router Call": [
+     {
+      "startTime": 1793197707124,
+      "executionIndex": 1,
+      "source": [
+       {
+        "previousNode": "Webhook",
+        "previousNodeOutput": 0,
+        "previousNodeRun": 0
+       }
+      ],
+      "hints": [],
+      "executionTime": 1704,
+      "executionStatus": "success",
+      "data": {
+       "main": [
+        [
+         {
+          "json": {
+           "id": "chatcmpl-b7a65da03177af50",
+           "created": 1793197707,
+           "model": "long-context-local",
+           "object": "chat.completion",
+           "system_fingerprint": "vllm-0.1.dev21830+g8244d1c44-tp2-282456d0",
+           "choices": [
+            {
+             "finish_reason": "stop",
+             "index": 0,
+             "message": {
+              "content": "HELLO-AGENT-N8N-OK",
+              "role": "assistant",
+              "reasoning_content": "The user sent \"go\" and my system prompt says to reply with exactly \"HELLO-AGENT-N8N-OK\". So I should just reply with that exact string.",
+              "provider_specific_fields": {
+               "refusal": null,
+               "reasoning": "The user sent \"go\" and my system prompt says to reply with exactly \"HELLO-AGENT-N8N-OK\". So I should just reply with that exact string."
+              }
+             },
+             "provider_specific_fields": {
+              "token_ids": null,
+              "stop_reason": 154827,
+              "routed_experts": null
+             }
+            }
+           ],
+           "usage": {
+            "completion_tokens": 47,
+            "prompt_tokens": 26,
+            "total_tokens": 73,
+            "completion_tokens_details": {
+             "reasoning_tokens": 36
+            },
+            "prompt_tokens_details": {
+             "cached_tokens": 26,
+             "created_cache_tokens": 0
+            }
+           }
+          },
+          "pairedItem": {
+           "item": 0
+          }
+         }
+        ]
+       ]
+      }
+     }
+    ]
+   },
+   "lastNodeExecuted": "Router Call"
+  },
+  "executionData": {
+   "contextData": {},
+   "nodeExecutionStack": [],
+   "metadata": {},
+   "waitingExecution": {},
+   "waitingExecutionSource": {},
+   "runtimeData": {
+    "version": 1,
+    "establishedAt": 1793197707112,
+    "source": "webhook",
+    "triggerNode": {
+     "name": "Webhook",
+     "type": "n8n-nodes-base.webhook"
+    },
+    "redaction": {
+     "version": 2,
+     "production": false,
+     "manual": false
+    }
+   }
+  },
+  "resumeToken": "98e34cafa13262962d3c955f523b425e297c90256ec25aee1de5ba226367ef98"
+ }
+}

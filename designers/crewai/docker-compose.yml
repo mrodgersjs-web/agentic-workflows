@@ -1,0 +1,15 @@
+name: ad-crewai
+# CrewAI (MIT framework) hello-crew, self-hosted. No CrewAI AMP/cloud account.
+services:
+  crew:
+    build: ./app
+    image: ad-crewai-agent:local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${CREW_PORT}:8321"
+    environment:
+      AD_LLM_BASE: http://$RIG_HOST:4000/v1
+      AD_LLM_MODEL: long-context-local
+      AD_LLM_KEY: ${ROUTER_KEY}
+    volumes:
+      - /Volumes/OWC-DOCKER/agentic-designers/crewai/state:/data

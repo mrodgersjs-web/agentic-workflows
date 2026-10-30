@@ -1,0 +1,18 @@
+name: ad-langgraph
+# LangGraph (MIT core framework) hello-agent, self-hosted on the offload daemon.
+# The LangGraph *Platform* server image (langchain/langgraph-api) and LangGraph Studio
+# both require a LangSmith account license key (free tier) — pending Mike's call.
+# This service runs the MIT framework directly: FastAPI /run + /health.
+services:
+  agent:
+    build: ./app
+    image: ad-langgraph-agent:local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${LG_PORT}:${LG_PORT}"
+    environment:
+      AD_LLM_BASE: http://$RIG_HOST:4000/v1
+      AD_LLM_MODEL: long-context-local
+      AD_LLM_KEY: ${ROUTER_KEY}
+    volumes:
+      - /Volumes/OWC-DOCKER/agentic-designers/langgraph/state:/data

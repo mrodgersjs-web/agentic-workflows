@@ -1,0 +1,8 @@
+{
+  "dependencies": [
+    "."
+  ],
+  "graphs": {
+    "hello_agent": "./agent.py:graph"
+  }
+}

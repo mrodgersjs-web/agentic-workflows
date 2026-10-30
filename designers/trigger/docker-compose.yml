@@ -1,0 +1,241 @@
+name: trigger
+
+# Adapted from (agentic-designers port: OWC bind volumes, loopback publish, local aux files) # Adapted from triggerdotdev/trigger.dev hosting/docker/webapp/docker-compose.yml @ v4.6.3
+# Pilot deltas (trigger-qnap pilot, 2026-09-27):
+#   - webapp publishes LAN-IP only (WEBAPP_PUBLISH_IP); no host ports on internal services
+#     (QNAP port collisions: registry 5000, minio 9000-9001, clickhouse 9090 already taken)
+#   - realtime streams v1 (redis-backed): s2-init + s2 services removed, webapp depends_on s2 dropped
+#   - TRIGGER_TELEMETRY_DISABLED=1 (LAN-only pilot, no outbound telemetry)
+
+x-logging: &logging-config
+  driver: ${LOGGING_DRIVER:-local}
+  options:
+    max-size: ${LOGGING_MAX_SIZE:-20m}
+    max-file: ${LOGGING_MAX_FILES:-5}
+    compress: ${LOGGING_COMPRESS:-true}
+
+services:
+  webapp:
+    image: ghcr.io/triggerdotdev/trigger.dev:${TRIGGER_IMAGE_TAG:-latest}
+    restart: ${RESTART_POLICY:-unless-stopped}
+    logging: *logging-config
+    ports:
+      - ${WEBAPP_PUBLISH_IP:-127.0.0.1}:${WEBAPP_PORT:-8030}:3000
+    depends_on:
+      - postgres
+      - redis
+      - clickhouse
+    networks:
+      - webapp
+      - supervisor
+    volumes:
+      - ${AD_DATA_ROOT}/shared:/home/node/shared
+    # Only needed for bootstrap
+    user: root
+    # Only needed for bootstrap
+    command: sh -c "chown -R node:node /home/node/shared && exec ./scripts/entrypoint.sh"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "http.get('http://localhost:3000/healthcheck', res => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    environment:
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:8030}
+      LOGIN_ORIGIN: ${LOGIN_ORIGIN:-http://localhost:8030}
+      API_ORIGIN: ${API_ORIGIN:-http://localhost:8030}
+      ELECTRIC_ORIGIN: http://electric:3000
+      # Realtime streams v2, backed by the bundled s2-lite service. This powers
+      # AI-agent token streaming and run streams. Point the endpoint at a hosted
+      # S2 (https://s2.dev) instead by overriding these and setting an access token.
+      # To fall back to the Redis-backed v1 streams, set the version to `v1`.
+      REALTIME_STREAMS_DEFAULT_VERSION: ${REALTIME_STREAMS_DEFAULT_VERSION:-v2}
+      REALTIME_STREAMS_S2_BASIN: ${REALTIME_STREAMS_S2_BASIN:-trigger-realtime}
+      REALTIME_STREAMS_S2_ENDPOINT: ${REALTIME_STREAMS_S2_ENDPOINT:-http://s2/v1}
+      REALTIME_STREAMS_S2_SKIP_ACCESS_TOKENS: ${REALTIME_STREAMS_S2_SKIP_ACCESS_TOKENS:-true}
+      REALTIME_STREAMS_S2_ACCESS_TOKEN: ${REALTIME_STREAMS_S2_ACCESS_TOKEN:-}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/main?schema=public&sslmode=disable}
+      DIRECT_URL: ${DIRECT_URL:-postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/main?schema=public&sslmode=disable}
+      SESSION_SECRET: ${SESSION_SECRET}
+      MAGIC_LINK_SECRET: ${MAGIC_LINK_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      PROVIDER_SECRET: ${PROVIDER_SECRET}
+      COORDINATOR_SECRET: ${COORDINATOR_SECRET}
+      MANAGED_WORKER_SECRET: ${MANAGED_WORKER_SECRET}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_TLS_DISABLED: true
+      APP_LOG_LEVEL: info
+      TRIGGER_TELEMETRY_DISABLED: 1
+      DEV_OTEL_EXPORTER_OTLP_ENDPOINT: ${DEV_OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:8030/otel}
+      DEPLOY_REGISTRY_HOST: ${DOCKER_REGISTRY_URL:-localhost:5000}
+      DEPLOY_REGISTRY_NAMESPACE: ${DOCKER_REGISTRY_NAMESPACE:-trigger}
+      OBJECT_STORE_BASE_URL: ${OBJECT_STORE_BASE_URL:-http://minio:9000}
+      OBJECT_STORE_ACCESS_KEY_ID: ${OBJECT_STORE_ACCESS_KEY_ID}
+      OBJECT_STORE_SECRET_ACCESS_KEY: ${OBJECT_STORE_SECRET_ACCESS_KEY}
+      GRACEFUL_SHUTDOWN_TIMEOUT: 1000
+      NODE_MAX_OLD_SPACE_SIZE: ${NODE_MAX_OLD_SPACE_SIZE}
+      # Bootstrap - this will automatically set up a worker group for you
+      # This will NOT work for split deployments
+      TRIGGER_BOOTSTRAP_ENABLED: 1
+      TRIGGER_BOOTSTRAP_WORKER_GROUP_NAME: bootstrap
+      TRIGGER_BOOTSTRAP_WORKER_TOKEN_PATH: /home/node/shared/worker_token
+      # ClickHouse configuration
+      CLICKHOUSE_URL: ${CLICKHOUSE_URL:-http://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD}@clickhouse:8123?secure=false}
+      CLICKHOUSE_LOG_LEVEL: ${CLICKHOUSE_LOG_LEVEL:-info}
+      # Run replication
+      RUN_REPLICATION_ENABLED: ${RUN_REPLICATION_ENABLED:-1}
+      RUN_REPLICATION_CLICKHOUSE_URL: ${RUN_REPLICATION_CLICKHOUSE_URL:-http://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD}@clickhouse:8123}
+      RUN_REPLICATION_LOG_LEVEL: ${RUN_REPLICATION_LOG_LEVEL:-info}
+      # Internal OTEL configuration
+      INTERNAL_OTEL_TRACE_LOGGING_ENABLED: ${INTERNAL_OTEL_TRACE_LOGGING_ENABLED:-0}
+
+  postgres:
+    image: postgres:${POSTGRES_IMAGE_TAG:-14}
+    restart: ${RESTART_POLICY:-unless-stopped}
+    logging: *logging-config
+    volumes:
+      - ${AD_DATA_ROOT}/postgres:/var/lib/postgresql/data
+    networks:
+      - webapp
+    command:
+      - -c
+      - wal_level=logical
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env - run ./generate-secrets.sh}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:${REDIS_IMAGE_TAG:-7}
+    restart: ${RESTART_POLICY:-unless-stopped}
+    logging: *logging-config
+    volumes:
+      - ${AD_DATA_ROOT}/redis:/data
+    networks:
+      - webapp
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  electric:
+    image: electricsql/electric:${ELECTRIC_IMAGE_TAG:-1.2.4}
+    restart: ${RESTART_POLICY:-unless-stopped}
+    logging: *logging-config
+    depends_on:
+      - postgres
+    networks:
+      - webapp
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/main?schema=public&sslmode=disable}
+      ELECTRIC_INSECURE: true
+      ELECTRIC_USAGE_REPORTING: false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:${CLICKHOUSE_IMAGE_TAG:-26.2}
+    restart: ${RESTART_POLICY:-unless-stopped}
+    logging: *logging-config
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    environment:
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?Set CLICKHOUSE_PASSWORD in .env - run ./generate-secrets.sh}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    volumes:
+      # The same volume works across upgrades from the previous Bitnami-based
+      # setup: data-paths.xml keeps the on-disk layout compatible.
+      - ${AD_DATA_ROOT}/clickhouse:/var/lib/clickhouse
+      - ./clickhouse/data-paths.xml:/etc/clickhouse-server/config.d/data-paths.xml:ro
+      - ./clickhouse/override.xml:/etc/clickhouse-server/config.d/override.xml:ro
+      - ./clickhouse/users-override.xml:/etc/clickhouse-server/users.d/override.xml:ro
+    networks:
+      - webapp
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "clickhouse-client",
+          "--host",
+          "localhost",
+          "--port",
+          "9000",
+          "--user",
+          "${CLICKHOUSE_USER:-default}",
+          "--password",
+          "${CLICKHOUSE_PASSWORD}",
+          "--query",
+          "SELECT 1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  registry:
+    image: registry:${REGISTRY_IMAGE_TAG:-2}
+    restart: ${RESTART_POLICY:-unless-stopped}
+    logging: *logging-config
+    networks:
+      - webapp
+    volumes:
+      # registry-user:very-secure-indeed
+      - ./registry/auth.htpasswd:/auth/htpasswd:ro
+    environment:
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  minio:
+    image: bitnamilegacy/minio:${MINIO_IMAGE_TAG:-latest}
+    restart: ${RESTART_POLICY:-unless-stopped}
+    logging: *logging-config
+    networks:
+      - webapp
+    volumes:
+      - ${AD_DATA_ROOT}/minio:/bitnami/minio/data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-${OBJECT_STORE_ACCESS_KEY_ID:-admin}}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-${OBJECT_STORE_SECRET_ACCESS_KEY:?Set OBJECT_STORE_SECRET_ACCESS_KEY in .env - run ./generate-secrets.sh}}
+      MINIO_DEFAULT_BUCKETS: packets
+      MINIO_BROWSER: "on"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+networks:
+  supervisor:
+    name: supervisor
+  webapp:
+    name: webapp

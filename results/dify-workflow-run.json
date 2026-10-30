@@ -1,0 +1,24 @@
+{
+ "endpoint": "POST /v1/workflows/run (blocking, workflow app)",
+ "http_status": 200,
+ "response": {
+  "task_id": "a7c9fb4b-0136-45be-87b5-da9e40131d57",
+  "workflow_run_id": "ae1e255b-275e-41b0-9440-063085be9635",
+  "data": {
+   "id": "ae1e255b-275e-41b0-9440-063085be9635",
+   "workflow_id": "2b81f83d-da80-48a3-a786-64818638dafd",
+   "status": "succeeded",
+   "outputs": {
+    "reply": "HELLO-AGENT-DIFY-OK"
+   },
+   "error": null,
+   "elapsed_time": 11.977275,
+   "total_tokens": 84,
+   "total_steps": 3,
+   "created_at": 1793197741,
+   "finished_at": 1793197753
+  }
+ },
+ "model": "long-context-local via LiteLLM router",
+ "utc": "2026-10-28T14:28:51.374203+00:00"
+}

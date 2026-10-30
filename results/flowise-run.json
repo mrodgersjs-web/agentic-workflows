@@ -1,0 +1,9 @@
+{
+ "endpoint": "POST http://$RIG_HOST:3112/api/v1/prediction/df3fe622-faab-42df-8c15-291973c4877e (Agentflow v2, deployed)",
+ "http_status": 200,
+ "response": {
+  "raw": "{\"text\":\"HELLO-AGENT-FLOWISE-OK\",\"question\":\"go\",\"chatId\":\"221d5b62-7b1f-435b-9e0b-a26504d13a24\",\"chatMessageId\":\"99eead83-6ed0-4115-8506-a00f4b0e3fc6\",\"executionId\":\"fdd10caa-224f-4033-b944-1f118f07f31b\",\"agentFlowExecutedData\":[{\"nodeId\":\"startAgentflow_0\",\"nodeLabel\":\"Start\",\"data\":{\"id\":\"startAg"
+ },
+ "model": "long-context-local via LiteLLM router (OPENAI_BASE_URL env + credential openai-router)",
+ "utc": "2026-10-28T14:28:51.374203+00:00"
+}
